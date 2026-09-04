@@ -3,58 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TP Web3D Simple</title>
-  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <title>TP Web3D - Exo 5</title>
+
+  <!-- A-Frame 1.4.2 + Système de physique -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
 
   <script>
-    AFRAME.registerComponent('deplacement-joueur', {
+    AFRAME.registerComponent('mouvement-physique', {
       init: function () {
         this.keys = {};
-        this.position = this.el.object3D.position;
-        this.vitesseY = 0;
-        this.auSol = true;
+        this.auSol = false;
 
-        // Écoute des touches du clavier
         window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
         window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+
+        // Détection si le cube touche le sol/un objet
+        this.el.addEventListener('collide', () => {
+          this.auSol = true;
+        });
       },
 
-      tick: function (time, delta) {
-        let dt = delta / 1000;
-        let vitesse = 5 * dt;
+      tick: function () {
+        if (!this.el.body) return; // Attend que le corps physique soit chargé
 
-        // Ex 2 : Déplacements ZQSD / WASD
-        if (this.keys['KeyW'] || this.keys['KeyZ']) this.position.z -= vitesse;
-        if (this.keys['KeyS']) this.position.z += vitesse;
-        if (this.keys['KeyA'] || this.keys['KeyQ']) this.position.x -= vitesse;
-        if (this.keys['KeyD']) this.position.x += vitesse;
+        let vitesse = 5;
+        let vx = 0;
+        let vz = 0;
 
-        // Ex 2 : Saut avec la touche Espace
+        // Déplacements
+        if (this.keys['KeyW'] || this.keys['KeyZ']) vz -= vitesse;
+        if (this.keys['KeyS']) vz += vitesse;
+        if (this.keys['KeyA'] || this.keys['KeyQ']) vx -= vitesse;
+        if (this.keys['KeyD']) vx += vitesse;
+
+        // Application des vitesses sur le corps physique
+        this.el.body.velocity.x = vx;
+        this.el.body.velocity.z = vz;
+
+        // Empêche le cube de basculer/tourner sur lui-même lors des mouvements
+        this.el.body.angularVelocity.set(0, 0, 0);
+
+        // Saut physique
         if (this.keys['Space'] && this.auSol) {
-          this.vitesseY = 0.15;
+          this.el.body.velocity.y = 5;
           this.auSol = false;
         }
-
-        // Application de la gravité simple
-        if (!this.auSol) {
-          this.position.y += this.vitesseY;
-          this.vitesseY -= 0.3 * dt; // Pesanteur
-
-          // Vérification du sol (Ex 2 : Le cube touche le sol à Y = 0.5)
-          if (this.position.y <= 0.5) {
-            this.position.y = 0.5;
-            this.auSol = true;
-            this.vitesseY = 0;
-          }
-        }
-
-        // Ex 3 : La caméra suit la position du cube
-        let camera = document.getElementById('camera');
-        camera.setAttribute('position', {
-          x: this.position.x,
-          y: this.position.y + 2,
-          z: this.position.z + 5
-        });
       }
     });
   </script>
@@ -62,18 +56,17 @@
 
 <body>
 
-<a-scene>
+<!-- Déclaration de la scène physique (gravité de la Terre -9.8 m/s²) -->
+<a-scene physics="gravity: -9.8">
 
-  <!-- Ressources (Textures) -->
   <a-assets>
     <img id="skyTexture" src="Skybox.png">
     <img id="grassTexture" src="Grass.png">
   </a-assets>
 
-  <!-- Ex 1 : Skybox -->
   <a-sky src="#skyTexture"></a-sky>
 
-  <!-- Ex 1 : Sol -->
+  <!-- Sol physique fixe (static-body) -->
   <a-box
     position="0 -0.05 0"
     width="20"
@@ -81,9 +74,10 @@
     depth="20"
     src="#grassTexture"
     repeat="10 10"
+    static-body
   ></a-box>
 
-  <!-- Ex 2 : Cube Joueur -->
+  <!-- Joueur physique dynamique (dynamic-body) -->
   <a-box
     id="joueur"
     position="0 0.5 0"
@@ -91,16 +85,17 @@
     height="1"
     depth="1"
     color="#4CC3D9"
-    deplacement-joueur
+    dynamic-body="mass: 2"
+    mouvement-physique
   ></a-box>
 
-  <!-- Ex 6 : Cubes d'obstacles de test -->
-  <a-box position="-2 0.5 -3" color="#FFC65D"></a-box>
-  <a-box position="2 0.5 -2" color="#F15355"></a-box>
+  <a-entity camera look-controls position="0 2.5 5"></a-entity>
 
-  <!-- Ex 3 : Caméra (Suivi simple) -->
-  <a-entity id="camera" camera look-controls position="0 2.5 5"></a-entity>
+    <!-- Cube obstacle solide (immobile) -->
+  <a-box position="-2 0.5 -3" color="#FFC65D" static-body></a-box>
 
+  <!-- Cube obstacle poussable (soumis à la physique) -->
+  <a-box position="2 0.5 -2" color="#F15355" dynamic-body="mass: 1"></a-box>
 </a-scene>
 
 </body>
