@@ -3,48 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TP Web3D - Exo 5</title>
+  <title>TP Web3D - Exo 3, 4 et 5</title>
 
   <!-- A-Frame 1.4.2 + Système de physique -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
 
   <script>
-    AFRAME.registerComponent('mouvement-physique', {
+    AFRAME.registerComponent('controle-joueur', {
       init: function () {
         this.keys = {};
         this.auSol = false;
 
+        // Gestion du clavier
         window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
         window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
 
-        // Détection si le cube touche le sol/un objet
+        // Détection du contact avec le sol pour le saut
         this.el.addEventListener('collide', () => {
           this.auSol = true;
         });
       },
 
       tick: function () {
-        if (!this.el.body) return; // Attend que le corps physique soit chargé
+        if (!this.el.body) return;
 
-        let vitesse = 5;
+        let camera = document.getElementById('camera');
+        let playerPos = this.el.object3D.position;
+
+        // 1. SUIVI DE LA CAMÉRA : La caméra suit les coordonnées du joueur avec un décalage
+        camera.setAttribute('position', {
+          x: playerPos.x,
+          y: playerPos.y + 2.5,
+          z: playerPos.z + 5
+        });
+
+        // 2. ORIENTATION DES DÉPLACEMENTS SELON LA CAMÉRA
+        let cameraRotation = camera.getAttribute('rotation');
+        let angleRad = cameraRotation.y * (Math.PI / 180);
+
+        let inputX = 0;
+        let inputZ = 0;
+
+        if (this.keys['KeyW'] || this.keys['KeyZ']) inputZ -= 1; // Avancer vers la caméra
+        if (this.keys['KeyS']) inputZ += 1;                       // Reculer
+        if (this.keys['KeyA'] || this.keys['KeyQ']) inputX -= 1; // Gauche
+        if (this.keys['KeyD']) inputX += 1;                       // Droite
+
+        let vitesse = 6;
         let vx = 0;
         let vz = 0;
 
-        // Déplacements
-        if (this.keys['KeyW'] || this.keys['KeyZ']) vz -= vitesse;
-        if (this.keys['KeyS']) vz += vitesse;
-        if (this.keys['KeyA'] || this.keys['KeyQ']) vx -= vitesse;
-        if (this.keys['KeyD']) vx += vitesse;
+        if (inputX !== 0 || inputZ !== 0) {
+          // Calcul de la direction selon l'orientation Y de la caméra
+          vx = (inputX * Math.cos(angleRad) + inputZ * Math.sin(angleRad)) * vitesse;
+          vz = (-inputX * Math.sin(angleRad) + inputZ * Math.cos(angleRad)) * vitesse;
+        }
 
-        // Application des vitesses sur le corps physique
+        // Application des vitesses physiques
         this.el.body.velocity.x = vx;
         this.el.body.velocity.z = vz;
 
-        // Empêche le cube de basculer/tourner sur lui-même lors des mouvements
+        // Bloque le cube pour éviter qu'il ne se renverse sur le côté
         this.el.body.angularVelocity.set(0, 0, 0);
 
-        // Saut physique
+        // 3. SAUT PHYSIQUE
         if (this.keys['Space'] && this.auSol) {
           this.el.body.velocity.y = 5;
           this.auSol = false;
@@ -56,7 +79,7 @@
 
 <body>
 
-<!-- Déclaration de la scène physique (gravité de la Terre -9.8 m/s²) -->
+<!-- Scène avec Physique -->
 <a-scene physics="gravity: -9.8">
 
   <a-assets>
@@ -64,9 +87,10 @@
     <img id="grassTexture" src="Grass.png">
   </a-assets>
 
+  <!-- Exo 1: Ciel -->
   <a-sky src="#skyTexture"></a-sky>
 
-  <!-- Sol physique fixe (static-body) -->
+  <!-- Exo 1: Sol Solide -->
   <a-box
     position="0 -0.05 0"
     width="20"
@@ -77,7 +101,7 @@
     static-body
   ></a-box>
 
-  <!-- Joueur physique dynamique (dynamic-body) -->
+  <!-- Exo 2/4/5: Joueur Physiqué -->
   <a-box
     id="joueur"
     position="0 0.5 0"
@@ -86,16 +110,16 @@
     depth="1"
     color="#4CC3D9"
     dynamic-body="mass: 2"
-    mouvement-physique
+    controle-joueur
   ></a-box>
 
-  <a-entity camera look-controls position="0 2.5 5"></a-entity>
-
-    <!-- Cube obstacle solide (immobile) -->
+  <!-- Exo 6: Obstacles pour tester les collisions -->
   <a-box position="-2 0.5 -3" color="#FFC65D" static-body></a-box>
-
-  <!-- Cube obstacle poussable (soumis à la physique) -->
   <a-box position="2 0.5 -2" color="#F15355" dynamic-body="mass: 1"></a-box>
+
+  <!-- Exo 3: Caméra qui suit le cube -->
+  <a-entity id="camera" camera look-controls position="0 2.5 5"></a-entity>
+
 </a-scene>
 
 </body>
