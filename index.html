@@ -3,36 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A-Frame Scene</title>
-  
+  <title>TP Web3D Simple</title>
   <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+
+  <script>
+    AFRAME.registerComponent('deplacement-joueur', {
+      init: function () {
+        this.keys = {};
+        this.position = this.el.object3D.position;
+        this.vitesseY = 0;
+        this.auSol = true;
+
+        // Écoute des touches du clavier
+        window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+      },
+
+      tick: function (time, delta) {
+        let dt = delta / 1000;
+        let vitesse = 5 * dt;
+
+        // Ex 2 : Déplacements ZQSD / WASD
+        if (this.keys['KeyW'] || this.keys['KeyZ']) this.position.z -= vitesse;
+        if (this.keys['KeyS']) this.position.z += vitesse;
+        if (this.keys['KeyA'] || this.keys['KeyQ']) this.position.x -= vitesse;
+        if (this.keys['KeyD']) this.position.x += vitesse;
+
+        // Ex 2 : Saut avec la touche Espace
+        if (this.keys['Space'] && this.auSol) {
+          this.vitesseY = 0.15;
+          this.auSol = false;
+        }
+
+        // Application de la gravité simple
+        if (!this.auSol) {
+          this.position.y += this.vitesseY;
+          this.vitesseY -= 0.3 * dt; // Pesanteur
+
+          // Vérification du sol (Ex 2 : Le cube touche le sol à Y = 0.5)
+          if (this.position.y <= 0.5) {
+            this.position.y = 0.5;
+            this.auSol = true;
+            this.vitesseY = 0;
+          }
+        }
+
+        // Ex 3 : La caméra suit la position du cube
+        let camera = document.getElementById('camera');
+        camera.setAttribute('position', {
+          x: this.position.x,
+          y: this.position.y + 2,
+          z: this.position.z + 5
+        });
+      }
+    });
+  </script>
 </head>
 
 <body>
 
 <a-scene>
 
-  <!-- Gestion des ressources (Textures) -->
+  <!-- Ressources (Textures) -->
   <a-assets>
     <img id="skyTexture" src="Skybox.png">
     <img id="grassTexture" src="Grass.png">
   </a-assets>
 
-  <!-- Skybox -->
+  <!-- Ex 1 : Skybox -->
   <a-sky src="#skyTexture"></a-sky>
 
-  <!-- Sol -->
+  <!-- Ex 1 : Sol -->
   <a-box
     position="0 -0.05 0"
-    width="15"
+    width="20"
     height="0.1"
-    depth="15"
+    depth="20"
     src="#grassTexture"
     repeat="10 10"
   ></a-box>
 
-  <!-- Caméra pour bien visualiser la scène -->
-  <a-entity camera look-controls position="0 1.6 3"></a-entity>
+  <!-- Ex 2 : Cube Joueur -->
+  <a-box
+    id="joueur"
+    position="0 0.5 0"
+    width="1"
+    height="1"
+    depth="1"
+    color="#4CC3D9"
+    deplacement-joueur
+  ></a-box>
+
+  <!-- Ex 6 : Cubes d'obstacles de test -->
+  <a-box position="-2 0.5 -3" color="#FFC65D"></a-box>
+  <a-box position="2 0.5 -2" color="#F15355"></a-box>
+
+  <!-- Ex 3 : Caméra (Suivi simple) -->
+  <a-entity id="camera" camera look-controls position="0 2.5 5"></a-entity>
 
 </a-scene>
 
